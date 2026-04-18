@@ -6,13 +6,9 @@ import yaml
 from logging import config
 from web3 import Web3
 from web3.middleware import (
-    geth_poa_middleware,
-    construct_sign_and_send_raw_middleware,
-    time_based_cache_middleware,
-    latest_block_based_cache_middleware,
-    simple_cache_middleware,
+    ExtraDataToPOAMiddleware,
+    SignAndSendRawMiddlewareBuilder,
 )
-from web3.gas_strategies.time_based import fast_gas_price_strategy
 
 
 def setup_logging(
@@ -48,17 +44,9 @@ def setup_web3(rpc_url, private_key):
     w3 = Web3(Web3.HTTPProvider(rpc_url))
 
     # Middleware to sign transactions from a private key
-    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-    w3.middleware_onion.add(construct_sign_and_send_raw_middleware(private_key))
+    w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+    w3.middleware_onion.add(SignAndSendRawMiddlewareBuilder.build(private_key))
     w3.eth.default_account = w3.eth.account.from_key(private_key).address
-
-    # Gas Middleware
-    w3.eth.set_gas_price_strategy(fast_gas_price_strategy)
-
-    # Caching middleware
-    w3.middleware_onion.add(time_based_cache_middleware)
-    w3.middleware_onion.add(latest_block_based_cache_middleware)
-    w3.middleware_onion.add(simple_cache_middleware)
 
     return w3
 
